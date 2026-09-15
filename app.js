@@ -1,0 +1,374 @@
+/* ==========================================================
+   ملخص مهندس الموقع — مرجع التنفيذ السريع
+   منطق التطبيق: بحث، تصنيف، محفوظات، تنقل
+   ملاحظة: هذا الملف لا يغيّر أي نص أصلي من الملف المصدر.
+   ========================================================== */
+
+let ENTRIES = [];
+let STATE = {
+  view: "home",           // home | category | search | favorites | allCategories
+  primary: null,
+  secondary: null,
+  query: "",
+};
+
+const FAV_KEY = "engineerRefFavorites_v1";
+const THEME_KEY = "engineerRefTheme_v1";
+
+/* ---------------- Arabic-aware normalization for search ---------------- */
+function normalizeAr(str) {
+  if (!str) return "";
+  return str
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, "")   // remove tashkeel/tatweel
+    .replace(/[إأآا]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/[ًٌٍَُِّْ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/* ---------------- Favorites ---------------- */
+function getFavorites() {
+  try {
+    return JSON.parse(localStorage.getItem(FAV_KEY) || "[]");
+  } catch (e) { return []; }
+}
+function isFavorite(id) { return getFavorites().includes(id); }
+function toggleFavorite(id) {
+  let favs = getFavorites();
+  if (favs.includes(id)) favs = favs.filter(x => x !== id);
+  else favs.push(id);
+  localStorage.setItem(FAV_KEY, JSON.stringify(favs));
+}
+
+/* ---------------- Theme ---------------- */
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const theme = saved || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem(THEME_KEY, next);
+  updateThemeIcon();
+}
+function updateThemeIcon() {
+  const btn = document.getElementById("themeToggle");
+  if (!btn) return;
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  btn.textContent = isDark ? "☀️" : "🌙";
+}
+
+/* ---------------- Highlight numbers/units in original text ---------------- */
+const UNIT_RE = /([٠-٩0-9]+(?:\.[٠-٩0-9]+)?\s?(?:سم|مم|م\b|كغم|كجم|طن|طن\/م٢|ساعة|ساعات|يوم|أيام|درجة|°C|°|٪|%|مرة القطر|مره القطر)|Ø\s?[٠-٩0-9]+|[٠-٩0-9]+\s?×\s?[٠-٩0-9]+)/g;
+function highlightNumbers(text) {
+  return escapeHtml(text).replace(UNIT_RE, m => `<mark>${m}</mark>`);
+}
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* ---------------- Data helpers ---------------- */
+function getSecondariesFor(primary) {
+  const map = new Map();
+  ENTRIES.filter(e => e.primaryCategory === primary).forEach(e => {
+    const key = e.secondaryCategory || "عام";
+    map.set(key, (map.get(key) || 0) + 1);
+  });
+  return Array.from(map.entries()); // [ [name, count], ... ]
+}
+function countFor(primary) {
+  return ENTRIES.filter(e => e.primaryCategory === primary).length;
+}
+function filteredEntries() {
+  let list = ENTRIES;
+  if (STATE.view === "favorites") {
+    const favs = getFavorites();
+    return ENTRIES.filter(e => favs.includes(e.id));
+  }
+  if (STATE.primary) list = list.filter(e => e.primaryCategory === STATE.primary);
+  if (STATE.secondary) list = list.filter(e => (e.secondaryCategory || "عام") === STATE.secondary);
+  if (STATE.query && STATE.query.trim()) {
+    const q = normalizeAr(STATE.query);
+    const terms = q.split(" ").filter(Boolean);
+    list = list.filter(e => {
+      const hay = normalizeAr([e.originalText, e.primaryCategory, e.secondaryCategory, e.title].join(" "));
+      return terms.every(t => hay.includes(t));
+    });
+  }
+  return list;
+}
+
+/* ---------------- Navigation ---------------- */
+function goHome() {
+  STATE = { view: "home", primary: null, secondary: null, query: "" };
+  render();
+}
+function goCategory(primary, secondary) {
+  STATE.view = "category";
+  STATE.primary = primary;
+  STATE.secondary = secondary || null;
+  STATE.query = "";
+  render();
+}
+function goSearch(q) {
+  STATE.view = "search";
+  STATE.query = q || "";
+  render();
+}
+function goFavorites() {
+  STATE.view = "favorites";
+  STATE.primary = null; STATE.secondary = null; STATE.query = "";
+  render();
+}
+function goAllCategories() {
+  STATE.view = "allCategories";
+  STATE.primary = null; STATE.secondary = null; STATE.query = "";
+  render();
+}
+
+/* ---------------- Rendering ---------------- */
+function render() {
+
+  const app = document.getElementById("content");
+  const bc = document.getElementById("breadcrumb");
+  const searchInput = document.getElementById("searchInput");
+  const clearBtn = document.getElementById("searchClear");
+
+  const wantValue = STATE.query || "";
+  if (searchInput.value !== wantValue) searchInput.value = wantValue;
+  if (clearBtn) clearBtn.style.display = wantValue ? "flex" : "none";
+  searchInput.placeholder = STATE.view === "category"
+    ? `ابحث داخل ${STATE.primary}...`
+    : "ابحث في ملخص مهندس الموقع...";
+
+  if (STATE.view === "home") {
+    bc.innerHTML = "";
+    app.innerHTML = renderHome();
+  } else if (STATE.view === "allCategories") {
+    bc.innerHTML = crumbHtml([["الرئيسية", goHome]]);
+    app.innerHTML = renderAllCategories();
+  } else if (STATE.view === "favorites") {
+    bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["المحفوظة", null]]);
+    app.innerHTML = renderList(filteredEntries(), { emptyIcon: "☆", emptyTitle: "لا توجد عناصر محفوظة", emptyText: "اضغط على ☆ داخل أي بطاقة لحفظها هنا للوصول السريع." });
+  } else if (STATE.view === "search") {
+    bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["نتائج البحث", null]]);
+    app.innerHTML = renderSearchResults();
+  } else if (STATE.view === "category") {
+    const crumbs = [["الرئيسية", goHome], [STATE.primary, () => goCategory(STATE.primary, null)]];
+    bc.innerHTML = crumbHtml(crumbs) + (STATE.secondary ? `<span class="sep">›</span><b>${escapeHtml(STATE.secondary)}</b>` : "");
+    app.innerHTML = renderCategory();
+  }
+
+  attachDynamicListeners();
+  window.scrollTo(0, 0);
+}
+
+
+function crumbHtml(items) {
+  return items.map(([label, fn], i) => {
+    const isLast = i === items.length - 1;
+    return `${i > 0 ? '<span class="sep">›</span>' : ""}<span class="crumb" data-crumb="${i}">${isLast && !fn ? `<b>${escapeHtml(label)}</b>` : escapeHtml(label)}</span>`;
+  }).join("");
+}
+
+function renderHome() {
+  const quick = QUICK_ACCESS.map(id => {
+    const cfg = CATEGORY_CONFIG.find(c => c.id === id);
+    return `<button class="quick-btn" data-goto="${escapeHtml(id)}"><span class="qicon">${cfg.icon}</span>${escapeHtml(id)}</button>`;
+  }).join("");
+
+  const options = CATEGORY_CONFIG.map(c => `<option value="${escapeHtml(c.id)}">${c.icon} ${escapeHtml(c.id)} (${countFor(c.id)})</option>`).join("");
+
+  return `
+    <div class="select-card">
+      <select class="select-native" id="primarySelect">
+        <option value="">اختر المادة / العنصر…</option>
+        ${options}
+      </select>
+    </div>
+    <div class="section-label">وصول سريع</div>
+    <div class="quick-grid">${quick}</div>
+    <div class="section-label">كل الأقسام</div>
+    <div class="quick-grid">${CATEGORY_CONFIG.filter(c => !QUICK_ACCESS.includes(c.id)).map(c => `<button class="quick-btn" data-goto="${escapeHtml(c.id)}"><span class="qicon">${c.icon}</span>${escapeHtml(c.id)}</button>`).join("")}</div>
+  `;
+}
+
+function renderAllCategories() {
+  const items = CATEGORY_CONFIG.map(c => `
+    <button class="quick-btn" style="flex-direction:row;justify-content:flex-start;padding:14px;gap:10px;" data-goto="${escapeHtml(c.id)}">
+      <span class="qicon">${c.icon}</span>
+      <span style="flex:1;text-align:right;">${escapeHtml(c.id)}</span>
+      <span style="color:var(--ink-faint);font-weight:500;">${countFor(c.id)}</span>
+    </button>
+  `).join("");
+  return `<button class="favorites-entry" id="favoritesEntry"><span>☆</span><span>المحفوظة</span><span class="favorites-count">${getFavorites().length}</span></button><div class="quick-grid" style="grid-template-columns:1fr;">${items}</div>`;
+}
+
+function renderCategory() {
+  const secondaries = getSecondariesFor(STATE.primary);
+  const chips = `<div class="chip-row">
+      <button class="chip ${!STATE.secondary ? "active" : ""}" data-sec="">الكل <span class="count">${countFor(STATE.primary)}</span></button>
+      ${secondaries.map(([name, cnt]) => `<button class="chip ${STATE.secondary === name ? "active" : ""}" data-sec="${escapeHtml(name)}">${escapeHtml(name)} <span class="count">${cnt}</span></button>`).join("")}
+    </div>`;
+
+  const activeFilter = STATE.secondary ? `
+    <div class="active-filters">
+      <div class="filter-pill">${escapeHtml(STATE.secondary)}<button data-clearsec="1">×</button></div>
+    </div>` : "";
+
+  return chips + activeFilter + renderList(filteredEntries(), { emptyIcon: "🔍", emptyTitle: "لا نتائج هنا", emptyText: "جرّب تصنيفًا آخر أو امسح الفلتر." });
+}
+
+function renderSearchResults() {
+  if (!STATE.query.trim()) {
+    return `<div class="empty"><div class="e-icon">🔎</div><h3>ابدأ الكتابة للبحث</h3><p>يبحث التطبيق في كل النصوص، العناوين، والتصنيفات.</p></div>`;
+  }
+  return renderList(filteredEntries(), { emptyIcon: "🔍", emptyTitle: "لا نتائج مطابقة", emptyText: "جرّب كلمات مختلفة أو تحقق من الإملاء." });
+}
+
+function renderList(list, emptyOpts) {
+  if (!list.length) {
+    return `<div class="empty"><div class="e-icon">${emptyOpts.emptyIcon}</div><h3>${emptyOpts.emptyTitle}</h3><p>${emptyOpts.emptyText}</p></div>`;
+  }
+  const countLabel = `<div class="result-count">${list.length} نتيجة</div>`;
+  return countLabel + list.map(cardHtml).join("");
+}
+
+function cardHtml(e) {
+  const fav = isFavorite(e.id);
+  const isLong = e.originalText.length > 150;
+  const noteClass = e.noteType ? ` note-${e.noteType}` : "";
+  const path = [e.primaryCategory, e.secondaryCategory].filter(Boolean).join(" › ");
+  const img = e.hasImage ? `
+    <div class="card-img" data-img="${escapeHtml(e.imagePath)}">
+      <img src="${escapeHtml(e.imagePath)}" loading="lazy" alt="${escapeHtml(e.imageCaption || "")}">
+      <div class="cap">🖼 ${escapeHtml(e.imageCaption || "رسم توضيحي من الملف")}</div>
+    </div>` : "";
+
+  return `
+    <div class="card${noteClass}" data-card="${e.id}">
+      <div class="card-top">
+        ${isLong ? `<div class="card-title">${escapeHtml(e.title)}</div>` : `<div class="card-body no-title ${isLong ? "clamped" : ""}">${highlightNumbers(e.originalText)}</div>`}
+        <button class="fav-btn ${fav ? "active" : ""}" data-fav="${e.id}">${fav ? "★" : "☆"}</button>
+      </div>
+      ${isLong ? `<div class="card-body clamped" data-full="0">${highlightNumbers(e.originalText)}</div>` : ""}
+      ${isLong ? `<button class="more-btn" data-more="${e.id}">عرض المزيد</button>` : ""}
+      ${e.noteType ? `<div class="badge-row"><span class="tag-badge note-${e.noteType}">${e.noteType}</span></div>` : ""}
+      ${img}
+      <div class="card-path">${escapeHtml(path)}</div>
+    </div>`;
+}
+
+/* ---------------- Dynamic listeners (re-attached after each render) ---------------- */
+function attachDynamicListeners() {
+  const favEntry = document.getElementById("favoritesEntry");
+  if (favEntry) favEntry.onclick = goFavorites;
+  document.querySelectorAll("[data-goto]").forEach(el => {
+    el.onclick = () => goCategory(el.dataset.goto, null);
+  });
+  const sel = document.getElementById("primarySelect");
+  if (sel) sel.onchange = () => { if (sel.value) goCategory(sel.value, null); };
+
+  document.querySelectorAll("[data-sec]").forEach(el => {
+    el.onclick = () => goCategory(STATE.primary, el.dataset.sec || null);
+  });
+  document.querySelectorAll("[data-clearsec]").forEach(el => {
+    el.onclick = () => goCategory(STATE.primary, null);
+  });
+  document.querySelectorAll("[data-fav]").forEach(el => {
+    el.onclick = (ev) => {
+      ev.stopPropagation();
+      const id = parseInt(el.dataset.fav, 10);
+      toggleFavorite(id);
+      el.classList.toggle("active");
+      el.textContent = el.classList.contains("active") ? "★" : "☆";
+      if (STATE.view === "favorites") render();
+    };
+  });
+  document.querySelectorAll("[data-more]").forEach(el => {
+    el.onclick = () => {
+      const card = el.closest(".card");
+      const body = card.querySelector(".card-body");
+      body.classList.toggle("clamped");
+      el.textContent = body.classList.contains("clamped") ? "عرض المزيد" : "عرض أقل";
+    };
+  });
+  document.querySelectorAll("[data-img]").forEach(el => {
+    el.onclick = () => openLightbox(el.dataset.img);
+  });
+  // breadcrumb clicks
+  const bcEl = document.getElementById("breadcrumb");
+  const crumbs = bcEl.querySelectorAll(".crumb");
+  crumbs.forEach((c, i) => {
+    c.onclick = () => {
+      if (STATE.view === "category") {
+        if (i === 0) goHome();
+        else if (i === 1) goCategory(STATE.primary, null);
+      } else if (i === 0) goHome();
+    };
+  });
+}
+
+function openLightbox(src) {
+  const lb = document.getElementById("lightbox");
+  document.getElementById("lightboxImg").src = src;
+  lb.classList.add("open");
+}
+function closeLightbox() {
+  document.getElementById("lightbox").classList.remove("open");
+}
+
+/* ---------------- Init ---------------- */
+async function init() {
+  initTheme();
+  if (typeof ENTRIES_DATA === "undefined" || !ENTRIES_DATA.length) {
+    document.getElementById("content").innerHTML = `<div class="empty"><div class="e-icon">⚠️</div><h3>تعذّر تحميل البيانات</h3><p>ملف entries.js غير موجود أو فارغ. تأكد من وجود جميع ملفات التطبيق في نفس المجلد.</p></div>`;
+    return;
+  }
+  ENTRIES = ENTRIES_DATA;
+
+  document.getElementById("themeToggle").onclick = toggleTheme;
+  updateThemeIcon();
+  document.getElementById("lightboxClose").onclick = closeLightbox;
+  document.getElementById("lightbox").onclick = (e) => { if (e.target.id === "lightbox") closeLightbox(); };
+
+  const searchInput = document.getElementById("searchInput");
+  const clearBtn = document.getElementById("searchClear");
+  searchInput.addEventListener("input", () => {
+    const val = searchInput.value;
+    STATE.query = val;
+    if (STATE.view === "category") {
+      render(); // live filter within the current category
+    } else if (val.trim()) {
+      STATE.view = "search";
+      render();
+    } else {
+      goHome();
+    }
+  });
+  clearBtn.onclick = () => {
+    STATE.query = "";
+    if (STATE.view === "search") goHome();
+    else render();
+    searchInput.focus();
+  };
+  const searchPanel = document.getElementById("searchPanel");
+  const searchToggle = document.getElementById("searchToggle");
+  const categoriesToggle = document.getElementById("categoriesToggle");
+
+  searchToggle.onclick = () => {
+    const willOpen = searchPanel.classList.contains("hidden");
+    searchPanel.classList.toggle("hidden");
+    if (willOpen) setTimeout(() => searchInput.focus(), 50);
+  };
+  categoriesToggle.onclick = goAllCategories;
+
+  render();
+}
+
+document.addEventListener("DOMContentLoaded", init);

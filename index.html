@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>ملخص مهندس الموقع — مرجع التنفيذ السريع</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="brand">
+        <h1>ملخص مهندس الموقع</h1>
+        <span>مرجع التنفيذ السريع</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="searchToggle" title="البحث" aria-label="البحث">🔎</button>
+        <button class="icon-btn" id="categoriesToggle" title="الأقسام" aria-label="الأقسام">☰</button>
+        <button class="icon-btn" id="themeToggle" title="الوضع الليلي" aria-label="الوضع الليلي">🌙</button>
+      </div>
+    </div>
+    <div class="search-wrap hidden" id="searchPanel">
+      <input class="search-input" id="searchInput" type="text" placeholder="ابحث في ملخص مهندس الموقع...">
+      <span class="search-icon">🔎</span>
+      <button class="search-clear" id="searchClear">✕</button>
+    </div>
+    <div class="breadcrumb" id="breadcrumb"></div>
+  </div>
+
+  <div class="content" id="content"></div>
+
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose">✕</button>
+    <img id="lightboxImg" src="" alt="">
+  </div>
+
+</div>
+
+<script src="categories.js"></script>
+<script src="entries.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
