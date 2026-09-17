@@ -324,7 +324,7 @@ function itemCardHtml(insp, it, idx, total) {
       <div class="item-title-row"><div class="item-text">${escapeHtml(it.text)}</div><button class="item-edit-icon" data-edit-item="${it.id}" title="تعديل">✏️</button></div>
       <div class="status-row">
         ${["pass", "issue", "na"].map(st => `
-          <button data-s="${st}" data-set-status="${it.id}:${st}" class="${s === st ? "active" : ""}">${STATUS_ICONS[st]} ${STATUS_LABELS[st]}</button>
+          <button type="button" data-s="${st}" data-set-status="${it.id}:${st}" class="${s === st ? "active" : ""}">${STATUS_ICONS[st]} ${STATUS_LABELS[st]}</button>
         `).join("")}
       </div>
       ${s === "issue" ? `

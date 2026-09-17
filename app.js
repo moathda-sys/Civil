@@ -216,7 +216,9 @@ function renderInner() {
 
   attachDynamicListeners();
   if (typeof attachInspectionListeners === "function") attachInspectionListeners();
-  if (document.activeElement !== searchInput) window.scrollTo(0, 0);
+  // لا تعِد المستخدم لأعلى الصفحة عند تغيير حالة بند داخل قائمة الاستلام.
+  // بقية التنقلات بين الصفحات تبدأ من الأعلى كالمعتاد.
+  if (STATE.view !== "inspectionDetail" && document.activeElement !== searchInput) window.scrollTo(0, 0);
 }
 
 function crumbHtml(items) {

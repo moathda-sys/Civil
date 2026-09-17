@@ -461,3 +461,4 @@ button{font-family:inherit;}
 .more-actions summary{list-style:none;cursor:pointer;color:var(--ink-dim);font-weight:700;font-size:13px;padding:8px;}
 .more-actions summary::-webkit-details-marker{display:none;}
 @media (max-width:390px){.topbar{padding-inline:8px}.topbar-row .nav-link{font-size:10.5px;padding:0 4px}.topbar-row .icon-btn{width:34px}.status-row button{font-size:9px}}
+.auth-text-btn{display:block;margin:12px auto 0;padding:4px 8px;border:0;background:none;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
