@@ -9,8 +9,8 @@
      SUPABASE_URL  = Project URL
      SUPABASE_ANON_KEY = anon / publishable key (وليس service_role!)
 ------------------------------------------------------------- */
-const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+const SUPABASE_URL = "https://tynulzxfqqcrhjdezczp.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_q-9nr0C-v5bcRebA1UDuoQ_YGlTHt4F";
 
 let sbClient = null;
 function getSb() {
