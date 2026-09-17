@@ -194,9 +194,6 @@ function renderInner() {
     const crumbs = [["الرئيسية", goHome], [STATE.primary, () => goCategory(STATE.primary, null)]];
     bc.innerHTML = crumbHtml(crumbs) + (STATE.secondary ? `<span class="sep">›</span><b>${escapeHtml(STATE.secondary)}</b>` : "");
     app.innerHTML = renderCategory();
-  } else if (STATE.view === "auth") {
-    bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["تسجيل الدخول", null]]);
-    app.innerHTML = renderAuthScreen();
   } else if (STATE.view === "inspections") {
     bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["استلام التسليح", null]]);
     app.innerHTML = renderInspectionsPage();
@@ -229,8 +226,7 @@ function crumbHtml(items) {
 }
 
 function renderHome() {
-  const canShowPrivate = !supabaseConfigured() || !!getCurrentUser();
-  const activeInspections = canShowPrivate && typeof LOCAL !== "undefined"
+  const activeInspections = typeof LOCAL !== "undefined"
     ? Object.values(LOCAL.inspections || {})
         .filter(i => i.status === "active")
         .sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""))
@@ -482,10 +478,8 @@ async function init() {
 
   render();
 
-  // تهيئة المصادقة والمزامنة (لا تمنع أو تؤخر عرض المرجع الأساسي)
-  if (typeof initAuth === "function") {
-    initAuth().catch(err => console.error("initAuth error:", err));
-  }
+  // تسجيل Service Worker لجعل التطبيق قابلاً للتثبيت والعمل دون اتصال.
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
 }
 
 document.addEventListener("DOMContentLoaded", init);

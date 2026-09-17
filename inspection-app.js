@@ -11,13 +11,11 @@ let WARN_INCOMPLETE = {};   // { [inspectionId]: true } ephemeral, not persisted
 
 /* ---------------- Navigation ---------------- */
 function goInspections() {
-  if (supabaseConfigured() && !getCurrentUser()) { STATE.view = "auth"; render(); return; }
   STATE.view = "inspections";
   STATE.inspectionId = null;
   render();
 }
 function goInspectionNew() {
-  if (supabaseConfigured() && !getCurrentUser()) { STATE.view = "auth"; render(); return; }
   const activeCount = Object.values(LOCAL.inspections).filter(i => i.status === "active").length;
   if (activeCount >= MAX_ACTIVE_INSPECTIONS) {
     alert(`وصلت للحد الأقصى (${MAX_ACTIVE_INSPECTIONS}) من القوائم الجارية. أكمل أو أرشف إحداها قبل إنشاء قائمة جديدة.`);
@@ -33,7 +31,6 @@ function goInspectionDetail(id) {
   render();
 }
 function goTemplates() {
-  if (supabaseConfigured() && !getCurrentUser()) { STATE.view = "auth"; render(); return; }
   STATE.view = "templates";
   render();
 }
@@ -89,11 +86,7 @@ function renderInspectionsPage() {
       </div>`;
   }).join("");
 
-  const userBar = getCurrentUser() ? `
-    <div class="user-bar">
-      <span>مسجّل الدخول: ${escapeHtml(getCurrentUser().email || "")}</span>
-      <button id="logoutBtn">تسجيل الخروج</button>
-    </div>` : "";
+  const userBar = "";
 
   return `
     ${userBar}
@@ -132,8 +125,6 @@ function attachInspectionsPageListeners() {
   document.querySelectorAll("[data-filter]").forEach(el => {
     el.onclick = () => { INSP_FILTER = el.dataset.filter; render(); };
   });
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) logoutBtn.onclick = doLogout;
   const mgmt = document.getElementById("manageTemplatesBtn");
   if (mgmt) mgmt.onclick = goTemplates;
 }
@@ -243,12 +234,6 @@ function createInspectionFromWizard(name) {
   };
   LOCAL.inspections[id] = insp;
   persistLocal();
-  const user = getCurrentUser();
-  if (user) {
-    const { items: _omit, ...row } = insp;
-    queueOp({ table: "inspections", action: "upsert", payload: { ...row, user_id: user.id } });
-    items.forEach(it => queueOp({ table: "inspection_items", action: "upsert", payload: { ...it, inspection_id: id } }));
-  }
   goInspectionDetail(id);
 }
 
@@ -628,7 +613,6 @@ function attachTemplateEditorListeners() {
 
 /* ---------------- Attach-all dispatcher, called after every render() ---------------- */
 function attachInspectionListeners() {
-  attachAuthListeners();
   attachInspectionsPageListeners();
   attachWizardListeners();
   attachInspectionDetailListeners();

@@ -1,0 +1,12 @@
+{
+  "name":"مرجع مهندس الموقع",
+  "short_name":"مهندس الموقع",
+  "description":"مرجع وقوائم استلام هندسية تعمل محليًا على الجهاز",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#f7f4ed",
+  "theme_color":"#f7f4ed",
+  "orientation":"portrait-primary",
+  "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

@@ -118,7 +118,7 @@ const DEFAULT_TEMPLATE_NAMES = {
   raft: "تسليح اللبشة",
 };
 
-/* يبني كائن قالب افتراضي جاهز للاستخدام (لا يُحفظ في Supabase، يعيش في الكود فقط) */
+/* يبني كائن قالب افتراضي جاهز للاستخدام من الكود مباشرة. */
 function getDefaultTemplate(elementType, elementSubtype) {
   const key = defaultTemplateKey(elementType, elementSubtype);
   const items = DEFAULT_TEMPLATE_ITEMS[key];
