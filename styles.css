@@ -462,3 +462,16 @@ button{font-family:inherit;}
 .more-actions summary::-webkit-details-marker{display:none;}
 @media (max-width:390px){.topbar{padding-inline:8px}.topbar-row .nav-link{font-size:10.5px;padding:0 4px}.topbar-row .icon-btn{width:34px}.status-row button{font-size:9px}}
 .auth-text-btn{display:block;margin:12px auto 0;padding:4px 8px;border:0;background:none;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+
+
+/* Reference add / edit / delete */
+.reference-actions{display:flex;justify-content:flex-start;margin:8px 0 10px;}
+.reference-add-btn{border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-family:inherit;font-size:13px;font-weight:800;padding:9px 13px;cursor:pointer;}
+.reference-card-actions{display:flex;gap:12px;margin-top:9px;padding-top:8px;border-top:1px solid var(--border);}
+.reference-card-actions button{border:0;background:none;color:var(--accent);font-family:inherit;font-size:12px;font-weight:700;padding:2px 0;cursor:pointer;}
+.reference-card-actions .danger-text{color:var(--warn);}
+.ref-editor-field{margin:12px 0;text-align:right;}
+.ref-editor-field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-dim);margin-bottom:6px;}
+.ref-editor-field textarea,.ref-editor-field select{width:100%;border:1.5px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:14px;padding:10px;outline:none;}
+.ref-editor-field textarea:focus,.ref-editor-field select:focus{border-color:var(--accent);}
+.confirm-actions .ref-save{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}

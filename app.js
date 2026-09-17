@@ -18,6 +18,35 @@ let STATE = {
 const FAV_KEY = "engineerRefFavorites_v1";
 const THEME_KEY = "engineerRefTheme_v1";
 
+/* ---------------- Local reference customization ---------------- */
+function referenceStore() {
+  if (typeof LOCAL === "undefined") return { added:{}, overrides:{}, deleted:{} };
+  LOCAL.reference = LOCAL.reference || { added:{}, overrides:{}, deleted:{} };
+  LOCAL.reference.added = LOCAL.reference.added || {};
+  LOCAL.reference.overrides = LOCAL.reference.overrides || {};
+  LOCAL.reference.deleted = LOCAL.reference.deleted || {};
+  return LOCAL.reference;
+}
+function refreshReferenceEntries() {
+  const r = referenceStore();
+  const base = (typeof ENTRIES_DATA !== "undefined" ? ENTRIES_DATA : []).filter(e => !r.deleted[String(e.id)]).map(e => ({...e, ...(r.overrides[String(e.id)] || {})}));
+  ENTRIES = base.concat(Object.values(r.added));
+}
+function findReferenceEntry(id) { return ENTRIES.find(e => String(e.id) === String(id)); }
+function saveReferenceEntry(entry) {
+  const r = referenceStore();
+  if (String(entry.id).startsWith("custom-")) r.added[String(entry.id)] = entry;
+  else r.overrides[String(entry.id)] = { title:entry.title || "", originalText:entry.originalText, secondaryCategory:entry.secondaryCategory || "عام" };
+  persistLocal(); refreshReferenceEntries();
+}
+function deleteReferenceEntry(id) {
+  const r = referenceStore(); const key=String(id);
+  if (key.startsWith("custom-")) delete r.added[key];
+  else { r.deleted[key]=true; delete r.overrides[key]; }
+  let favs=getFavorites().filter(x=>String(x)!==key); localStorage.setItem(FAV_KEY,JSON.stringify(favs));
+  persistLocal(); refreshReferenceEntries();
+}
+
 /* ---------------- Arabic-aware normalization for search ---------------- */
 function normalizeAr(str) {
   if (!str) return "";
@@ -293,7 +322,8 @@ function renderCategory() {
       <div class="filter-pill">${escapeHtml(STATE.secondary)}<button data-clearsec="1">×</button></div>
     </div>` : "";
 
-  return chips + activeFilter + renderList(filteredEntries(), { emptyIcon: "🔍", emptyTitle: "لا نتائج هنا", emptyText: "جرّب تصنيفًا آخر أو امسح الفلتر." });
+  const addAction = `<div class="reference-actions"><button class="reference-add-btn" id="addReferenceBtn">＋ إضافة معلومة</button></div>`;
+  return chips + activeFilter + addAction + renderList(filteredEntries(), { emptyIcon: "🔍", emptyTitle: "لا نتائج هنا", emptyText: "جرّب تصنيفًا آخر أو امسح الفلتر." });
 }
 
 function renderSearchResults() {
@@ -332,6 +362,10 @@ function cardHtml(e) {
       ${isLong ? `<button class="more-btn" data-more="${e.id}">عرض المزيد</button>` : ""}
       ${e.noteType ? `<div class="badge-row"><span class="tag-badge note-${e.noteType}">${e.noteType}</span></div>` : ""}
       ${img}
+      <div class="reference-card-actions">
+        <button data-edit-ref="${escapeHtml(String(e.id))}">✏️ تعديل</button>
+        <button class="danger-text" data-delete-ref="${escapeHtml(String(e.id))}">🗑️ حذف</button>
+      </div>
       <div class="card-path">${escapeHtml(path)}</div>
     </div>`;
 }
@@ -357,7 +391,8 @@ function attachDynamicListeners() {
   document.querySelectorAll("[data-fav]").forEach(el => {
     el.onclick = (ev) => {
       ev.stopPropagation();
-      const id = parseInt(el.dataset.fav, 10);
+      const rawId = el.dataset.fav;
+      const id = /^\d+$/.test(rawId) ? parseInt(rawId, 10) : rawId;
       toggleFavorite(id);
       el.classList.toggle("active");
       el.textContent = el.classList.contains("active") ? "★" : "☆";
@@ -375,6 +410,16 @@ function attachDynamicListeners() {
   document.querySelectorAll("[data-img]").forEach(el => {
     el.onclick = () => openLightbox(el.dataset.img);
   });
+  const addReferenceBtn = document.getElementById("addReferenceBtn");
+  if (addReferenceBtn) addReferenceBtn.onclick = () => openReferenceEditor();
+  document.querySelectorAll("[data-edit-ref]").forEach(el => { el.onclick = () => openReferenceEditor(el.dataset.editRef); });
+  document.querySelectorAll("[data-delete-ref]").forEach(el => {
+    el.onclick = () => {
+      const entry=findReferenceEntry(el.dataset.deleteRef); if(!entry) return;
+      showConfirm({title:"حذف المعلومة؟",text:"سيتم حذفها من مرجعك المحفوظ على هذا الجهاز.",confirmLabel:"حذف",danger:true,onConfirm:()=>{deleteReferenceEntry(entry.id);render();}});
+    };
+  });
+
   // breadcrumb clicks
   const bcEl = document.getElementById("breadcrumb");
   const crumbs = bcEl.querySelectorAll(".crumb");
@@ -392,6 +437,31 @@ function attachDynamicListeners() {
       }
     };
   });
+}
+
+function openReferenceEditor(id) {
+  const existing = id != null ? findReferenceEntry(id) : null;
+  const primary = existing?.primaryCategory || STATE.primary;
+  if (!primary) return;
+  const currentSecondary = existing?.secondaryCategory || STATE.secondary || "عام";
+  const secondaryNames = Array.from(new Set(getSecondariesFor(primary).map(([name]) => name).concat([currentSecondary])));
+  const overlay=document.getElementById("confirmOverlay"), sheet=document.getElementById("confirmSheet");
+  sheet.innerHTML=`
+    <h3>${existing ? "تعديل المعلومة" : "إضافة معلومة"}</h3>
+    <div class="ref-editor-field"><label>القسم الفرعي</label><select id="refSecondary">${secondaryNames.map(x=>`<option ${x===currentSecondary?"selected":""}>${escapeHtml(x)}</option>`).join("")}</select></div>
+    <div class="ref-editor-field"><label>المعلومة</label><textarea id="refText" rows="5" placeholder="اكتب المعلومة هنا...">${escapeHtml(existing?.originalText || "")}</textarea></div>
+    <div class="confirm-actions"><button id="refCancel">إلغاء</button><button class="ref-save" id="refSave">حفظ</button></div>`;
+  overlay.classList.add("open");
+  document.getElementById("refCancel").onclick=()=>overlay.classList.remove("open");
+  document.getElementById("refSave").onclick=()=>{
+    const text=document.getElementById("refText").value.trim(); if(!text){document.getElementById("refText").focus();return;}
+    const secondary=document.getElementById("refSecondary").value || "عام";
+    const entry=existing ? {...existing,originalText:text,secondaryCategory:secondary,title:text.length>150?(existing.title||text.slice(0,70)):""} : {
+      id:"custom-"+uid(), primaryCategory:primary, secondaryCategory:secondary, title:"", originalText:text,
+      noteType:"", hasImage:false, imagePath:"", imageCaption:""
+    };
+    saveReferenceEntry(entry); overlay.classList.remove("open"); render(); setSyncStatus("تم الحفظ على الجهاز",1200);
+  };
 }
 
 function openLightbox(src) {
@@ -436,7 +506,7 @@ async function init() {
     document.getElementById("content").innerHTML = `<div class="empty"><div class="e-icon">⚠️</div><h3>تعذّر تحميل البيانات</h3><p>ملف entries.js غير موجود أو فارغ أو لم يُحمَّل بسبب مشكلة Cache. جرّب تحديث الصفحة (Pull to refresh) أو امسح ذاكرة التخزين المؤقت لـ Safari.</p></div>`;
     return;
   }
-  ENTRIES = ENTRIES_DATA;
+  refreshReferenceEntries();
 
   document.getElementById("themeToggle").onclick = toggleTheme;
   updateThemeIcon();

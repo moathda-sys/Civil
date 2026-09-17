@@ -1,13 +1,13 @@
 /* Local-only data layer: no account, no server, no external database. */
 const LOCAL_KEY = "reinfLocalData_v2";
 const LEGACY_LOCAL_KEY = "reinfLocalData_v1";
-function emptyLocal(){ return { templates:{}, inspections:{} }; }
+function emptyLocal(){ return { templates:{}, inspections:{}, reference:{ added:{}, overrides:{}, deleted:{} } }; }
 function loadLocal(){
   try {
     const current=localStorage.getItem(LOCAL_KEY);
     const legacy=localStorage.getItem(LEGACY_LOCAL_KEY);
     const parsed=JSON.parse(current || legacy || "null");
-    return parsed && typeof parsed === "object" ? {templates:parsed.templates||{}, inspections:parsed.inspections||{}} : emptyLocal();
+    return parsed && typeof parsed === "object" ? {templates:parsed.templates||{}, inspections:parsed.inspections||{}, reference:{ added:parsed.reference?.added||{}, overrides:parsed.reference?.overrides||{}, deleted:parsed.reference?.deleted||{} }} : emptyLocal();
   } catch(e){ return emptyLocal(); }
 }
 function saveLocal(data){ try { localStorage.setItem(LOCAL_KEY, JSON.stringify(data)); } catch(e){ setSyncStatus("تعذر الحفظ على الجهاز"); } }
