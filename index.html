@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>مرجع مهندس الموقع</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=20260917-2">
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <div class="topbar-row">
+      <button class="icon-btn" id="themeToggle" title="الوضع الليلي">🌙</button>
+      <button class="nav-link" id="navHomeBtn">🏠 الرئيسية</button>
+      <div class="menu-wrap">
+        <button class="nav-link" id="navMenuBtn">☰ القوائم</button>
+        <div class="menu-popover hidden" id="navMenuPopover">
+          <button data-menu="cats">📂 الأقسام</button>
+          <button data-menu="fav">☆ المحفوظة</button>
+          <button data-menu="inspections">🧱 استلام التسليح</button>
+        </div>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <input class="search-input" id="searchInput" type="text" placeholder="ابحث في المرجع...">
+      <span class="search-icon">🔎</span>
+      <button class="search-clear" id="searchClear">✕</button>
+    </div>
+    <div class="breadcrumb" id="breadcrumb"></div>
+  </div>
+
+  <div class="content" id="content"></div>
+
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose">✕</button>
+    <img id="lightboxImg" src="" alt="">
+  </div>
+
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-sheet" id="confirmSheet"></div>
+  </div>
+
+  <div class="sync-toast" id="syncToast"></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="categories.js?v=20260917-2"></script>
+<script src="entries.js?v=20260917-2"></script>
+<script src="inspections.js?v=20260917-2"></script>
+<script src="supabase-client.js?v=20260917-2"></script>
+<script src="auth.js?v=20260917-2"></script>
+<script src="inspection-app.js?v=20260917-2"></script>
+<script src="app.js?v=20260917-2"></script>
+</body>
+</html>
