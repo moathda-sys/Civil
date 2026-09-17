@@ -214,7 +214,7 @@ function renderInner() {
 
   attachDynamicListeners();
   if (typeof attachInspectionListeners === "function") attachInspectionListeners();
-  window.scrollTo(0, 0);
+  if (document.activeElement !== searchInput) window.scrollTo(0, 0);
 }
 
 function crumbHtml(items) {
@@ -225,28 +225,63 @@ function crumbHtml(items) {
 }
 
 function renderHome() {
-  const quickIds = (typeof QUICK_ACCESS !== "undefined" ? QUICK_ACCESS : []).filter(id =>
-    (typeof CATEGORY_CONFIG !== "undefined") && CATEGORY_CONFIG.some(c => c.id === id)
-  );
-  const quick = quickIds.map(id => {
-    const cfg = CATEGORY_CONFIG.find(c => c.id === id);
-    return `<button class="quick-btn" data-goto="${escapeHtml(id)}"><span class="qicon">${cfg.icon}</span>${escapeHtml(id)}</button>`;
+  const canShowPrivate = !supabaseConfigured() || !!getCurrentUser();
+  const activeInspections = canShowPrivate && typeof LOCAL !== "undefined"
+    ? Object.values(LOCAL.inspections || {})
+        .filter(i => i.status === "active")
+        .sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""))
+    : [];
+
+  const activeCards = activeInspections.map(insp => {
+    const items = Array.isArray(insp.items) ? insp.items : [];
+    const total = items.length;
+    const unchecked = items.filter(i => i.status === "unchecked").length;
+    const checked = total - unchecked;
+    const pct = total ? Math.round((checked / total) * 100) : 0;
+    const typeLabel = typeof elementTypeLabel === "function"
+      ? elementTypeLabel(insp.element_type, insp.element_subtype)
+      : (insp.element_type || "");
+
+    return `
+      <button class="home-insp-card" data-open-insp="${escapeHtml(insp.id)}">
+        <div class="home-insp-head">
+          <div>
+            <div class="home-insp-name">${escapeHtml(insp.name)}</div>
+            <div class="home-insp-type">${escapeHtml(typeLabel)}</div>
+          </div>
+          <div class="home-insp-progress-text">${checked} / ${total}</div>
+        </div>
+        <div class="progress-bar"><div style="width:${pct}%"></div></div>
+        <div class="home-insp-foot"><span>تم ${checked} من ${total}</span><b>${pct}%</b></div>
+      </button>`;
   }).join("");
 
-  const categories = typeof CATEGORY_CONFIG !== "undefined" ? CATEGORY_CONFIG : [];
-  const options = categories.map(c => `<option value="${escapeHtml(c.id)}">${c.icon} ${escapeHtml(c.id)} (${countFor(c.id)})</option>`).join("");
+  let ongoingSection;
+  if (!canShowPrivate) {
+    ongoingSection = `<div class="home-empty-state">سجّل الدخول لعرض استلاماتك الجارية.</div>`;
+  } else if (activeCards) {
+    ongoingSection = `<div class="home-inspections">${activeCards}</div>`;
+  } else {
+    ongoingSection = `
+      <div class="home-empty-state">
+        <span>لا توجد استلامات جارية</span>
+        <button class="home-new-btn" id="newInspBtn">+ استلام جديد</button>
+      </div>`;
+  }
 
   return `
-    <div class="select-card">
-      <select class="select-native" id="primarySelect">
-        <option value="">اختر المادة / العنصر…</option>
-        ${options}
-      </select>
+    <div class="home-actions">
+      <button class="home-action-card" id="homeInspectionsBtn">
+        <span class="home-action-icon">🧱</span>
+        <span>استلام التسليح</span>
+      </button>
+      <button class="home-action-card" id="homeCategoriesBtn">
+        <span class="home-action-icon">📂</span>
+        <span>الأقسام</span>
+      </button>
     </div>
-    <div class="section-label">وصول سريع</div>
-    <div class="quick-grid">${quick}</div>
-    <div class="section-label">كل الأقسام</div>
-    <div class="quick-grid">${categories.filter(c => !quickIds.includes(c.id)).map(c => `<button class="quick-btn" data-goto="${escapeHtml(c.id)}"><span class="qicon">${c.icon}</span>${escapeHtml(c.id)}</button>`).join("")}</div>
+    <div class="section-label home-section-title">الاستلامات الجارية</div>
+    ${ongoingSection}
   `;
 }
 
@@ -319,6 +354,10 @@ function cardHtml(e) {
 
 /* ---------------- Dynamic listeners (re-attached after each render) ---------------- */
 function attachDynamicListeners() {
+  const homeInspectionsBtn = document.getElementById("homeInspectionsBtn");
+  if (homeInspectionsBtn) homeInspectionsBtn.onclick = goInspections;
+  const homeCategoriesBtn = document.getElementById("homeCategoriesBtn");
+  if (homeCategoriesBtn) homeCategoriesBtn.onclick = goAllCategories;
   document.querySelectorAll("[data-goto]").forEach(el => {
     el.onclick = () => goCategory(el.dataset.goto, null);
   });

@@ -27,9 +27,10 @@ async function initAuth() {
     if (CURRENT_USER) {
       pullAllUserData().then(() => { if (STATE.view.startsWith("insp") || STATE.view === "templates") render(); });
     }
-    if (STATE.view.startsWith("insp") || STATE.view === "templates" || STATE.view === "auth") render();
+    if (STATE.view.startsWith("insp") || STATE.view === "templates" || STATE.view === "auth" || STATE.view === "home") render();
   });
   if (CURRENT_USER) await pullAllUserData();
+  if (STATE.view === "home") render();
 }
 
 async function doSignUp(email, password) {
