@@ -443,3 +443,21 @@ button{font-family:inherit;}
   color:var(--accent-ink); font-family:inherit; font-weight:800; cursor:pointer;
 }
 .home-new-btn:active{ transform:scale(.97); }
+
+/* Compact mobile inspection layout */
+.topbar-row{gap:5px;}
+.topbar-row .nav-link{padding:0 7px;font-size:11.5px;gap:3px;flex:1;justify-content:center;min-width:0;}
+.topbar-row .icon-btn{width:36px;height:38px;}
+.checklist-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start;}
+.checklist-grid .item-card{margin-bottom:0;padding:9px;border-radius:12px;min-width:0;}
+.item-title-row{display:flex;align-items:flex-start;gap:4px;margin-bottom:7px;}
+.item-title-row .item-text{margin:0;flex:1;font-size:12.5px;line-height:1.35;min-width:0;}
+.item-edit-icon{border:0;background:none;color:var(--ink-faint);padding:0;font-size:11px;cursor:pointer;flex:none;}
+.status-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;}
+.status-row button{padding:7px 1px;border-radius:8px;font-size:9.5px;line-height:1.15;min-width:0;}
+.note-box{margin-top:6px;}
+.note-box textarea{min-height:44px;padding:7px;font-size:11px;}
+.more-actions{margin-top:8px;text-align:center;}
+.more-actions summary{list-style:none;cursor:pointer;color:var(--ink-dim);font-weight:700;font-size:13px;padding:8px;}
+.more-actions summary::-webkit-details-marker{display:none;}
+@media (max-width:390px){.topbar{padding-inline:8px}.topbar-row .nav-link{font-size:10.5px;padding:0 4px}.topbar-row .icon-btn{width:34px}.status-row button{font-size:9px}}

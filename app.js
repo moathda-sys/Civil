@@ -156,9 +156,11 @@ function renderInner() {
   closeMenuPopover();
 
   const navHome = document.getElementById("navHomeBtn");
-  const navMenu = document.getElementById("navMenuBtn");
+  const navInspections = document.getElementById("navInspectionsBtn");
+  const navCategories = document.getElementById("navCategoriesBtn");
   if (navHome) navHome.classList.toggle("active", STATE.view === "home");
-  if (navMenu) navMenu.classList.toggle("active", !REFERENCE_VIEWS.has(STATE.view) || STATE.view === "allCategories" || STATE.view === "favorites");
+  if (navInspections) navInspections.classList.toggle("active", ["inspections","inspectionNew","inspectionDetail","templates","templateEdit"].includes(STATE.view));
+  if (navCategories) navCategories.classList.toggle("active", STATE.view === "allCategories");
 
   const app = document.getElementById("content");
   const bc = document.getElementById("breadcrumb");
@@ -270,16 +272,6 @@ function renderHome() {
   }
 
   return `
-    <div class="home-actions">
-      <button class="home-action-card" id="homeInspectionsBtn">
-        <span class="home-action-icon">🧱</span>
-        <span>استلام التسليح</span>
-      </button>
-      <button class="home-action-card" id="homeCategoriesBtn">
-        <span class="home-action-icon">📂</span>
-        <span>الأقسام</span>
-      </button>
-    </div>
     <div class="section-label home-section-title">الاستلامات الجارية</div>
     ${ongoingSection}
   `;
@@ -460,16 +452,10 @@ async function init() {
   document.getElementById("lightbox").onclick = (e) => { if (e.target.id === "lightbox") closeLightbox(); };
 
   document.getElementById("navHomeBtn").onclick = goHome;
-  document.getElementById("navMenuBtn").onclick = (ev) => { ev.stopPropagation(); toggleMenuPopover(); };
-  document.querySelectorAll("#navMenuPopover [data-menu]").forEach(btn => {
-    btn.onclick = () => {
-      closeMenuPopover();
-      const k = btn.dataset.menu;
-      if (k === "cats") goAllCategories();
-      else if (k === "fav") goFavorites();
-      else if (k === "inspections") goInspections();
-    };
-  });
+  const navInspectionsBtn = document.getElementById("navInspectionsBtn");
+  if (navInspectionsBtn) navInspectionsBtn.onclick = goInspections;
+  const navCategoriesBtn = document.getElementById("navCategoriesBtn");
+  if (navCategoriesBtn) navCategoriesBtn.onclick = goAllCategories;
 
   const searchInput = document.getElementById("searchInput");
   const clearBtn = document.getElementById("searchClear");

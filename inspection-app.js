@@ -264,7 +264,7 @@ function renderInspectionDetail() {
   const checked = total - uncCount;
   const pct = total ? Math.round((checked / total) * 100) : 0;
 
-  const itemsHtml = insp.items.slice().sort((a, b) => a.position - b.position).map((it, idx) => itemCardHtml(insp, it, idx, insp.items.length)).join("");
+  const itemsHtml = `<div class="checklist-grid">${insp.items.slice().sort((a, b) => a.position - b.position).map((it, idx) => itemCardHtml(insp, it, idx, insp.items.length)).join("")}</div>`;
 
   const notes = insp.items.filter(i => i.status === "issue" && i.note && i.note.trim());
   const notesHtml = notes.length ? `
@@ -308,11 +308,12 @@ function renderInspectionDetail() {
     ${notesHtml}
     ${summaryHtml}
 
-    ${!isCompleted ? `<button class="finish-btn" id="finishInspBtn">إنهاء الاستلام</button>` : ""}
-    <button class="ghost-btn" id="saveAsTplBtn">💾 حفظ كقالب</button>
-    ${insp.status === "active" ? `<button class="ghost-btn" id="archiveInspBtn">📦 أرشفة</button>` : ""}
-    ${insp.status === "archived" ? `<button class="ghost-btn" id="unarchiveInspBtn">↩️ إعادة إلى الجارية</button>` : ""}
-    <button class="ghost-btn danger-btn" id="deleteInspBtn">🗑 حذف الاستلام</button>
+    ${!isCompleted ? `<button class="finish-btn" id="finishInspBtn">✅ اعتماد وإنهاء</button>` : ""}
+    <button class="ghost-btn" id="saveOngoingBtn">💾 حفظ في الأعمال الجارية</button>
+    <details class="more-actions"><summary>••• المزيد</summary>
+      <button class="ghost-btn" id="saveAsTplBtn">📋 حفظ كقالب جديد</button>
+      <button class="ghost-btn danger-btn" id="deleteInspBtn">🗑 حذف نهائي</button>
+    </details>
   `;
 }
 
@@ -320,9 +321,9 @@ function itemCardHtml(insp, it, idx, total) {
   const s = it.status || "unchecked";
   return `
     <div class="item-card status-${s}" data-item="${it.id}">
-      <div class="item-text">${escapeHtml(it.text)}</div>
+      <div class="item-title-row"><div class="item-text">${escapeHtml(it.text)}</div><button class="item-edit-icon" data-edit-item="${it.id}" title="تعديل">✏️</button></div>
       <div class="status-row">
-        ${["unchecked", "pass", "issue", "na"].map(st => `
+        ${["pass", "issue", "na"].map(st => `
           <button data-s="${st}" data-set-status="${it.id}:${st}" class="${s === st ? "active" : ""}">${STATUS_ICONS[st]} ${STATUS_LABELS[st]}</button>
         `).join("")}
       </div>
@@ -330,12 +331,6 @@ function itemCardHtml(insp, it, idx, total) {
         <div class="note-box">
           <textarea data-note="${it.id}" placeholder="ملاحظة قصيرة اختيارية...">${escapeHtml(it.note || "")}</textarea>
         </div>` : ""}
-      <div class="item-actions">
-        ${idx > 0 ? `<button data-move="${it.id}:up">▲ لأعلى</button>` : ""}
-        ${idx < total - 1 ? `<button data-move="${it.id}:down">▼ لأسفل</button>` : ""}
-        <button data-edit-item="${it.id}">✏️ تعديل</button>
-        <button data-del-item="${it.id}">🗑 حذف</button>
-      </div>
     </div>`;
 }
 
@@ -348,8 +343,9 @@ function attachInspectionDetailListeners() {
       const [itemId, status] = el.dataset.setStatus.split(":");
       const item = insp.items.find(i => i.id === itemId);
       if (!item) return;
-      item.status = status;
-      if (status !== "issue") item.note = item.note || "";
+      item.status = (item.status === status ? "unchecked" : status);
+      const effectiveStatus = item.status;
+      if (effectiveStatus !== "issue") item.note = item.note || "";
       upsertInspectionItemLocal(insp.id, item);
       render();
     };
@@ -453,6 +449,9 @@ function attachInspectionDetailListeners() {
     };
   }
 
+  const saveOngoingBtn = document.getElementById("saveOngoingBtn");
+  if (saveOngoingBtn) saveOngoingBtn.onclick = () => { insp.status = "active"; upsertInspectionLocal(insp); goInspections(); };
+
   const archiveBtn = document.getElementById("archiveInspBtn");
   if (archiveBtn) archiveBtn.onclick = () => { insp.status = "archived"; upsertInspectionLocal(insp); render(); };
   const unarchiveBtn = document.getElementById("unarchiveInspBtn");
@@ -544,12 +543,6 @@ function renderTemplateEditor() {
   const itemsHtml = editTpl.items.slice().sort((a, b) => a.position - b.position).map((it, idx, arr) => `
     <div class="item-card" data-tpl-item="${it.id}">
       <div class="item-text">${escapeHtml(it.text)}</div>
-      <div class="item-actions">
-        ${idx > 0 ? `<button data-tpl-move="${it.id}:up">▲</button>` : ""}
-        ${idx < arr.length - 1 ? `<button data-tpl-move="${it.id}:down">▼</button>` : ""}
-        <button data-tpl-edit-item="${it.id}">✏️ تعديل</button>
-        <button data-tpl-del-item="${it.id}">🗑 حذف</button>
-      </div>
     </div>`).join("");
 
   return `
