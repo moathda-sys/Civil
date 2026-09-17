@@ -5,7 +5,7 @@
 
 let ENTRIES = [];
 let STATE = {
-  view: "home",           // home | category | search | favorites | allCategories
+  view: "allCategories",  // category | search | favorites | allCategories
                            // | auth | inspections | inspectionNew | inspectionDetail | templates | templateEdit
   primary: null,
   secondary: null,
@@ -108,8 +108,7 @@ function filteredEntries() {
 
 /* ---------------- Navigation (reference section) ---------------- */
 function goHome() {
-  STATE = { view: "home", primary: null, secondary: null, query: "", inspectionId: null, templateEditId: null, wizard: null };
-  render();
+  goAllCategories();
 }
 function goCategory(primary, secondary) {
   STATE.view = "category";
@@ -135,7 +134,7 @@ function goAllCategories() {
 }
 
 /* ---------------- Rendering ---------------- */
-const REFERENCE_VIEWS = new Set(["home", "category", "search", "favorites", "allCategories"]);
+const REFERENCE_VIEWS = new Set(["category", "search", "favorites", "allCategories"]);
 
 function render() {
   try {
@@ -147,7 +146,7 @@ function render() {
     if (app) {
       app.innerHTML = `<div class="empty"><div class="e-icon">⚠️</div><h3>حدث خطأ أثناء العرض</h3>
         <p>${escapeHtml(err && err.message ? err.message : String(err))}</p>
-        <p style="margin-top:10px;"><button class="ghost-btn" onclick="goHome()">العودة للرئيسية</button></p></div>`;
+        <p style="margin-top:10px;"><button class="ghost-btn" onclick="goAllCategories()">العودة للأقسام</button></p></div>`;
     }
   }
 }
@@ -155,10 +154,8 @@ function render() {
 function renderInner() {
   closeMenuPopover();
 
-  const navHome = document.getElementById("navHomeBtn");
   const navInspections = document.getElementById("navInspectionsBtn");
   const navCategories = document.getElementById("navCategoriesBtn");
-  if (navHome) navHome.classList.toggle("active", STATE.view === "home");
   if (navInspections) navInspections.classList.toggle("active", ["inspections","inspectionNew","inspectionDetail","templates","templateEdit"].includes(STATE.view));
   if (navCategories) navCategories.classList.toggle("active", STATE.view === "allCategories");
 
@@ -178,36 +175,33 @@ function renderInner() {
     ? `ابحث داخل ${STATE.primary}...`
     : "ابحث في المرجع...";
 
-  if (STATE.view === "home") {
+  if (STATE.view === "allCategories") {
     bc.innerHTML = "";
-    app.innerHTML = renderHome();
-  } else if (STATE.view === "allCategories") {
-    bc.innerHTML = crumbHtml([["الرئيسية", goHome]]);
     app.innerHTML = renderAllCategories();
   } else if (STATE.view === "favorites") {
-    bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["المحفوظة", null]]);
+    bc.innerHTML = crumbHtml([["الأقسام", goAllCategories], ["المحفوظة", null]]);
     app.innerHTML = renderList(filteredEntries(), { emptyIcon: "☆", emptyTitle: "لا توجد عناصر محفوظة", emptyText: "اضغط على ☆ داخل أي بطاقة لحفظها هنا للوصول السريع." });
   } else if (STATE.view === "search") {
-    bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["نتائج البحث", null]]);
+    bc.innerHTML = crumbHtml([["الأقسام", goAllCategories], ["نتائج البحث", null]]);
     app.innerHTML = renderSearchResults();
   } else if (STATE.view === "category") {
-    const crumbs = [["الرئيسية", goHome], [STATE.primary, () => goCategory(STATE.primary, null)]];
+    const crumbs = [["الأقسام", goAllCategories], [STATE.primary, () => goCategory(STATE.primary, null)]];
     bc.innerHTML = crumbHtml(crumbs) + (STATE.secondary ? `<span class="sep">›</span><b>${escapeHtml(STATE.secondary)}</b>` : "");
     app.innerHTML = renderCategory();
   } else if (STATE.view === "inspections") {
-    bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["استلام التسليح", null]]);
+    bc.innerHTML = crumbHtml([["استلام التسليح", null]]);
     app.innerHTML = renderInspectionsPage();
   } else if (STATE.view === "inspectionNew") {
-    bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["استلام التسليح", goInspections], ["استلام جديد", null]]);
+    bc.innerHTML = crumbHtml([["استلام التسليح", goInspections], ["استلام جديد", null]]);
     app.innerHTML = renderInspectionWizard();
   } else if (STATE.view === "inspectionDetail") {
-    bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["استلام التسليح", goInspections], ["القائمة", null]]);
+    bc.innerHTML = crumbHtml([["استلام التسليح", goInspections], ["القائمة", null]]);
     app.innerHTML = renderInspectionDetail();
   } else if (STATE.view === "templates") {
-    bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["استلام التسليح", goInspections], ["القوالب", null]]);
+    bc.innerHTML = crumbHtml([["استلام التسليح", goInspections], ["القوالب", null]]);
     app.innerHTML = renderTemplatesPage();
   } else if (STATE.view === "templateEdit") {
-    bc.innerHTML = crumbHtml([["الرئيسية", goHome], ["استلام التسليح", goInspections], ["القوالب", goTemplates], ["تعديل", null]]);
+    bc.innerHTML = crumbHtml([["استلام التسليح", goInspections], ["القوالب", goTemplates], ["تعديل", null]]);
     app.innerHTML = renderTemplateEditor();
   }
 
@@ -257,7 +251,7 @@ function renderHome() {
   }).join("");
 
   let ongoingSection;
-  if (!canShowPrivate) {
+  if (false) {
     ongoingSection = `<div class="home-empty-state">سجّل الدخول لعرض استلاماتك الجارية.</div>`;
   } else if (activeCards) {
     ongoingSection = `<div class="home-inspections">${activeCards}</div>`;
@@ -449,8 +443,7 @@ async function init() {
   document.getElementById("lightboxClose").onclick = closeLightbox;
   document.getElementById("lightbox").onclick = (e) => { if (e.target.id === "lightbox") closeLightbox(); };
 
-  document.getElementById("navHomeBtn").onclick = goHome;
-  const navInspectionsBtn = document.getElementById("navInspectionsBtn");
+    const navInspectionsBtn = document.getElementById("navInspectionsBtn");
   if (navInspectionsBtn) navInspectionsBtn.onclick = goInspections;
   const navCategoriesBtn = document.getElementById("navCategoriesBtn");
   if (navCategoriesBtn) navCategoriesBtn.onclick = goAllCategories;
@@ -466,12 +459,12 @@ async function init() {
       STATE.view = "search";
       render();
     } else {
-      goHome();
+      goAllCategories();
     }
   });
   clearBtn.onclick = () => {
     STATE.query = "";
-    if (STATE.view === "search") goHome();
+    if (STATE.view === "search") goAllCategories();
     else render();
     searchInput.focus();
   };
